@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>증강 틱택토 1대1 (Augmented Tic-Tac-Toe)</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: #1e293b;
+      --panel-border: #334155;
+      --red-color: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.4);
+      --blue-color: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.4);
+      --gold-color: #f59e0b;
+      --neutral-stone: #64748b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      overflow-x: hidden;
+      transition: background-color 0.2s ease;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 시각 피드백 */
+    .screen-shake {
+      animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, -1px, 0); }
+      20%, 80% { transform: translate3d(3px, 2px, 0); }
+      30%, 50%, 70% { transform: translate3d(-5px, -3px, 0); }
+      40%, 60% { transform: translate3d(5px, 3px, 0); }
+    }
+
+    .hit-flash {
+      animation: flash 0.3s ease;
+    }
+    @keyframes flash {
+      0% { background-color: rgba(239, 68, 68, 0.6); }
+      100% { background-color: var(--bg-color); }
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    h1, h2, h3 {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 1.6rem;
+      color: var(--gold-color);
+      text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+    }
+
+    .desc {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      background: #0f172a;
+      color: var(--text-main);
+      font-size: 1rem;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid var(--gold-color);
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+      background: #334155;
+      transition: all 0.2s;
+      border: none;
+    }
+    button:hover:not(:disabled) {
+      filter: brightness(1.2);
+    }
+    button:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-red { background: var(--red-color); color: #fff; }
+    .btn-blue { background: var(--blue-color); color: #fff; }
+    .btn-gold { background: var(--gold-color); color: #000; }
+
+    .menu-button-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .menu-button-group button {
+      margin-bottom: 0;
+      padding: 8px;
+      font-size: 0.85rem;
+      background: #1e293b;
+      border: 1px solid var(--panel-border);
+    }
+
+    /* 로비 예산 선택 */
+    .budget-select {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .budget-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.9rem;
+      border: 1px solid var(--panel-border);
+    }
+    .budget-btn.active {
+      background: var(--gold-color);
+      color: #000;
+      border-color: var(--gold-color);
+    }
+
+    .room-info-card {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .room-code-display {
+      font-size: 2rem;
+      letter-spacing: 4px;
+      color: var(--gold-color);
+      font-weight: 900;
+      margin: 8px 0;
+    }
+
+    /* HUD */
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    .player-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+    .player-badge .mark {
+      font-size: 1.3rem;
+      font-weight: 900;
+    }
+    .red-side { color: var(--red-color); }
+    .blue-side { color: var(--blue-color); }
+    .hud-turn {
+      font-weight: 800;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    /* 4x4 보드 */
+    .board-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      margin-bottom: 12px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 6px;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--panel-border);
+    }
+    .cell {
+      background: #1e293b;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 900;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .cell:hover:not(.occupied) {
+      background: #334155;
+    }
+    .cell.selected {
+      border: 2px solid var(--gold-color);
+      box-shadow: 0 0 8px var(--gold-color);
+    }
+    .cell.target-valid {
+      background: rgba(245, 158, 11, 0.25);
+      border: 2px dashed var(--gold-color);
+    }
+    .cell.mark-X { color: var(--red-color); text-shadow: 0 0 10px var(--red-glow); }
+    .cell.mark-O { color: var(--blue-color); text-shadow: 0 0 10px var(--blue-glow); }
+    .cell.mark-B { color: var(--neutral-stone); }
+    .cell.mark-stealth { opacity: 0.75; font-style: italic; }
+
+    /* 줄 밀기 버튼 컨트롤 */
+    .push-controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .push-btn {
+      padding: 6px 0;
+      font-size: 0.8rem;
+      background: #334155;
+    }
+
+    /* 카드 리스트 */
+    .cards-scroll {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding-right: 4px;
+      margin-bottom: 12px;
+    }
+    .card-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+      font-size: 0.85rem;
+    }
+    .card-item.active {
+      border-color: var(--gold-color);
+      background: rgba(245, 158, 11, 0.1);
+    }
+    .card-info {
+      flex: 1;
+      padding-right: 8px;
+    }
+    .card-title {
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-cost {
+      color: var(--gold-color);
+      font-size: 0.8rem;
+    }
+    .card-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .card-btn {
+      width: auto;
+      padding: 6px 12px;
+      margin-bottom: 0;
+      font-size: 0.8rem;
+    }
+
+    /* 로그 창 */
+    .log-box {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.75rem;
+      height: 70px;
+      overflow-y: auto;
+      color: var(--text-muted);
+      border: 1px solid var(--panel-border);
+      margin-bottom: 10px;
+    }
+    .log-box p {
+      margin-bottom: 3px;
+    }
+
+    /* 관리자 바 */
+    .admin-bar {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--panel-border);
+      display: flex;
+      gap: 8px;
+    }
+    .admin-bar input {
+      flex: 2;
+      margin-bottom: 0;
+      font-size: 0.8rem;
+      padding: 6px;
+    }
+    .admin-bar button {
+      flex: 1;
+      margin-bottom: 0;
+      font-size: 0.8rem;
+      padding: 6px;
+    }
+
+    /* 모달 공통 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 450px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+      text-align: left;
+    }
+    .modal-body {
+      overflow-y: auto;
+      margin: 12px 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      padding-right: 4px;
+    }
+    .modal-body h4 {
+      color: var(--gold-color);
+      margin: 10px 0 4px;
+    }
+    .modal-body ul {
+      margin-left: 18px;
+      margin-bottom: 8px;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js",
+        "firebase/database": "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- 로비 및 로그인 화면 -->
+  <div id="auth-screen" class="container">
+    <h1>증강 틱택토 1대1</h1>
+    <p class="desc">별을 모아 카드를 사고 4×4 3목 전장에 배치하라</p>
+
+    <!-- 설명 및 도감 호출 버튼 -->
+    <div class="menu-button-group">
+      <button id="btn-open-rules">📖 게임 설명</button>
+      <button id="btn-open-catalog">🃏 증강 도감</button>
+    </div>
+
+    <input type="text" id="player-nickname" placeholder="플레이어 닉네임 입력" maxlength="10">
+
+    <div style="margin: 8px 0 6px; font-size: 0.85rem; color: var(--text-muted);">시작 예산 설정 (방장)</div>
+    <div class="budget-select">
+      <button type="button" class="budget-btn active" data-budget="5">5 별</button>
+      <button type="button" class="budget-btn" data-budget="7">7 별</button>
+      <button type="button" class="budget-btn" data-budget="10">10 별</button>
+    </div>
+
+    <button id="btn-create-room" class="btn-red">온라인 방 생성 (홍팀/X)</button>
+    
+    <div style="display: flex; gap: 8px; margin-top: 6px;">
+      <input type="number" id="input-room-code" placeholder="방 코드 4자리" maxlength="4">
+      <button id="btn-join-room" class="btn-blue" style="flex: 1;">입장 (청팀/O)</button>
+    </div>
+
+    <!-- 대기 상태 패널 -->
+    <div id="waiting-panel" class="hidden" style="margin-top: 15px;">
+      <div class="room-info-card">
+        <div>상대방에게 아래 코드를 공유하세요</div>
+        <div id="display-room-code" class="room-code-display">----</div>
+        <div id="waiting-status" style="font-size: 0.85rem; color: var(--gold-color);">상대방 대기 중...</div>
+      </div>
+    </div>
+
+    <div class="admin-bar">
+      <input type="password" id="admin-pass" placeholder="방폭 마스터키">
+      <button id="btn-admin-reset" class="btn-red">전체 초기화</button>
+    </div>
+  </div>
+
+  <!-- 메인 게임 화면 (상점 & 전투) -->
+  <div id="game-screen" class="container hidden">
+    <!-- HUD -->
+    <div class="hud">
+      <div class="player-badge red-side">
+        <span class="mark">X</span>
+        <span id="red-name">홍팀</span>
+        <span id="red-stars" style="color: var(--gold-color);">★ 0</span>
+      </div>
+      <div class="hud-turn">
+        <div id="match-phase">상점 페이즈</div>
+        <div id="turn-indicator" style="font-size: 0.8rem; color: var(--gold-color);">남은 시간 30s</div>
+      </div>
+      <div class="player-badge blue-side">
+        <span class="mark">O</span>
+        <span id="blue-name">청팀</span>
+        <span id="blue-stars" style="color: var(--gold-color);">★ 0</span>
+      </div>
+    </div>
+
+    <!-- 상점 UI (구매 단계) -->
+    <div id="shop-container">
+      <h3 style="font-size: 1rem; color: var(--gold-color);">비공개 증강 상점</h3>
+      <p class="desc" style="margin-bottom: 8px;">동일 카드 5종 중 선택. 구매 확정 시 상대와 동시 공개</p>
+      <div id="shop-cards" class="cards-scroll"></div>
+      <button id="btn-confirm-purchase" class="btn-gold">구매 확정 (<span id="my-cart-cost">0</span>별 소모)</button>
+    </div>
+
+    <!-- 4x4 보드 UI (전투 단계) -->
+    <div id="board-container" class="hidden">
+      <!-- 줄 밀기 상단 제어 버튼 -->
+      <div id="push-top-btns" class="push-controls hidden">
+        <button class="push-btn" data-col="0">↓ 1열</button>
+        <button class="push-btn" data-col="1">↓ 2열</button>
+        <button class="push-btn" data-col="2">↓ 3열</button>
+        <button class="push-btn" data-col="3">↓ 4열</button>
+      </div>
+
+      <div class="board-wrapper">
+        <div id="board" class="board"></div>
+      </div>
+
+      <!-- 액션 안내/취소 바 -->
+      <div id="action-guidance" class="hidden" style="background:#0f172a; padding:6px; border-radius:6px; margin-bottom:8px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+        <span id="action-text">대상을 선택하세요</span>
+        <button id="btn-cancel-action" style="width:auto; padding:3px 8px; margin-bottom:0; font-size:0.75rem;">취소</button>
+      </div>
+
+      <!-- 내가 보유한 증강 카드 목록 -->
+      <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px;">내 액션 카드 (판당 1회)</div>
+      <div id="my-hand-cards" class="cards-scroll" style="max-height: 120px;"></div>
+    </div>
+
+    <!-- 전투 행동 로그 -->
+    <div id="game-logs" class="log-box"></div>
+
+    <div style="display: flex; gap: 8px;">
+      <button id="btn-in-game-rules" style="background: #334155; font-size: 0.8rem; padding: 8px;">도감/설명</button>
+      <button id="btn-surrender" style="background: #334155; font-size: 0.8rem; padding: 8px;">항복(기권)</button>
+      <button id="btn-exit" style="background: #334155; font-size: 0.8rem; padding: 8px;">나가기</button>
+    </div>
+  </div>
+
+  <!-- 게임 설명 모달 -->
+  <div id="modal-rules" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 style="color: var(--gold-color);">게임 설명</h2>
+      <div class="modal-body">
+        <h4>1. 게임 개요</h4>
+        <p>4×4 크기의 판에서 가로, 세로, 대각선 중 먼저 <strong>연속 3목</strong>을 완성한 플레이어가 승리하는 전략 턴제 웹게임입니다.</p>
+
+        <h4>2. 게임 진행 순서</h4>
+        <ul>
+          <li><strong>방 생성 및 입장:</strong> 방장은 홍팀(X), 참가자는 청팀(O)으로 배정됩니다.</li>
+          <li><strong>비공개 상점 (30초):</strong> 주어진 별(기본 5개) 예산 내에서 무작위 5종의 카드 중 원하는 카드를 비공개로 구매합니다.</li>
+          <li><strong>오프닝 효과:</strong> 구매 완료 후 오프닝 카드(중앙 선점, 모서리 돌)가 보드에 자동 배치됩니다. 무료 마크를 한쪽만 받으면 그쪽이 후공이 됩니다.</li>
+          <li><strong>대전 시작:</strong> 자신의 턴에 일반 착수를 하거나 판당 1회 증강 액션을 사용할 수 있습니다.</li>
+        </ul>
+
+        <h4>3. 무승부 판정</h4>
+        <p>판이 모두 차거나 80턴에 도달할 경우 <strong>남은 별이 많은 플레이어가 최종 승리</strong>합니다. 남은 별까지 같다면 최종 무승부로 처리됩니다.</p>
+      </div>
+      <button id="btn-close-rules" class="btn-gold" style="margin-bottom: 0;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 증강 도감 모달 -->
+  <div id="modal-catalog" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 style="color: var(--gold-color);">증강 카드 전체 도감 (13종)</h2>
+      <div id="catalog-list" class="modal-body"></div>
+      <button id="btn-close-catalog" class="btn-gold" style="margin-bottom: 0;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 결과 모달 -->
+  <div id="modal-result" class="modal-overlay hidden">
+    <div class="modal-content" style="text-align: center;">
+      <h2 id="modal-title">대전 종료</h2>
+      <p id="modal-reason" style="font-size: 0.95rem; margin: 12px 0; color: var(--text-muted);"></p>
+      <div id="modal-stars-info" style="font-size: 0.85rem; margin-bottom: 14px; color: var(--gold-color);"></div>
+      <p style="font-size: 0.75rem; color: var(--text-muted);">5초 후 방이 자동으로 폭파 정리되며 대기실로 복귀합니다.</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "firebase/app";
+    import { getAuth, signInAnonymously } from "firebase/auth";
+    import { 
+      getDatabase, ref, set, get, update, remove, onValue, onDisconnect 
+    } from "firebase/database";
+
+    // Firebase 설정
+    const firebaseConfig = {
+  apiKey: "AIzaSyAzDc8nErqYcYYy-itp2Tk9WZExy3PBlIU",
+  authDomain: "battleship-f08f8.firebaseapp.com",
+  databaseURL: "https://battleship-f08f8-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "battleship-f08f8",
+  storageBucket: "battleship-f08f8.firebasestorage.app",
+  messagingSenderId: "1146329001",
+  appId: "1:1146329001:web:f2d698e5661582ee1f96b8"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const DB_ROOT = "augmented_ttt_rooms";
+
+    // 13종 증강 카드 도감
+    const CARD_CATALOG = {
+      center:     { id: "center", name: "중앙 선점", cost: 4, type: "오프닝", desc: "시작 시 중앙 4칸 중 무작위 빈 칸에 내 마크 1개 배치" },
+      corner:     { id: "corner", name: "모서리 돌", cost: 2, type: "오프닝", desc: "시작 시 무작위 빈 모서리에 내 마크 1개 배치" },
+      move:       { id: "move", name: "이동", cost: 2, type: "액션", desc: "내 마크를 상하좌우 인접한 빈 칸으로 이동" },
+      erase:      { id: "erase", name: "지우개", cost: 3, type: "액션", desc: "상대 마크 하나를 영구 제거" },
+      double_tap: { id: "double_tap", name: "더블 탭", cost: 4, type: "액션", desc: "한 턴에 마크 두 개를 연속 배치 (두 개 배치 후 승리 판정)" },
+      swap:       { id: "swap", name: "교환", cost: 3, type: "액션", desc: "내 마크와 대각 포함 인접 8방향 상대 마크의 위치 교환" },
+      seal:       { id: "seal", name: "봉인석", cost: 1, type: "액션", desc: "빈 칸에 누구도 사용할 수 없는 중립 봉인석 배치" },
+      hijack:     { id: "hijack", name: "강탈", cost: 5, type: "액션", desc: "상대 마크 하나를 즉시 내 마크로 변경" },
+      bomb:       { id: "bomb", name: "폭탄", cost: 2, type: "액션", desc: "선택 칸과 상하좌우 칸의 모든 마크 및 봉인석 제거" },
+      undo:       { id: "undo", name: "되돌리기", cost: 2, type: "액션", desc: "직전 상대 턴의 마지막 새 마크 제거. 턴 소모 없이 일반 착수 진행" },
+      stealth:    { id: "stealth", name: "은신", cost: 3, type: "액션", desc: "상대에게 보이지 않는 마크 배치 (직접 선택당하면 공개 후 다시 행동)" },
+      push:       { id: "push", name: "줄 밀기", cost: 2, type: "액션", desc: "선택한 세로 1줄 전체를 아래 방향으로 1칸 순환 이동" },
+      shield:     { id: "shield", name: "방패", cost: 3, type: "패시브", desc: "상대 승리 모양 완성 시 관여 마크 1개 자동 방어 제거 (1회)" }
+    };
+
+    let currentUser = null;
+    let currentRoomCode = null;
+    let myRole = null; 
+    let selectedBudget = 5;
+    let roomRef = null;
+    let roomListener = null;
+
+    let selectedActionCard = null;
+    let actionSubStep = null; 
+    let tempSwapSource = null;
+    let doubleTapCount = 0;
+    let shopCountdownTimer = null;
+    let localSelectedCards = new Set();
+
+    const authScreen = document.getElementById("auth-screen");
+    const gameScreen = document.getElementById("game-screen");
+    const waitingPanel = document.getElementById("waiting-panel");
+    const boardEl = document.getElementById("board");
+    const shopContainer = document.getElementById("shop-container");
+    const boardContainer = document.getElementById("board-container");
+    const logsBox = document.getElementById("game-logs");
+
+    // 햅틱 및 화면 피드백
+    function triggerFeedback(type = "normal") {
+      if (navigator.vibrate) {
+        if (type === "hit") navigator.vibrate([100, 50, 100]);
+        else navigator.vibrate(40);
+      }
+      document.body.classList.remove("screen-shake", "hit-flash");
+      void document.body.offsetWidth;
+      if (type === "hit") {
+        document.body.classList.add("screen-shake", "hit-flash");
+      } else {
+        document.body.classList.add("screen-shake");
+      }
+      setTimeout(() => {
+        document.body.classList.remove("screen-shake", "hit-flash");
+      }, 500);
+    }
+
+    function getNickname() {
+      const val = document.getElementById("player-nickname").value.trim();
+      return val ? val : (myRole === "red" ? "홍팀" : "청팀");
+    }
+
+    // 예산 선택
+    document.querySelectorAll(".budget-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".budget-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedBudget = parseInt(btn.dataset.budget, 10);
+      });
+    });
+
+    // 4자리 방 코드 생성
+    async function generateUniqueRoomCode() {
+      for (let i = 0; i < 10; i++) {
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        const snap = await get(ref(db, `${DB_ROOT}/${code}`));
+        if (!snap.exists()) return code;
+      }
+      return String(Math.floor(1000 + Math.random() * 9000));
+    }
+
+    function pickRandomShopCards() {
+      const keys = Object.keys(CARD_CATALOG);
+      const shuffled = [...keys].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, 5);
+    }
+
+    async function ensureAuth() {
+      if (!currentUser) {
+        const userCred = await signInAnonymously(auth);
+        currentUser = userCred.user;
+      }
+      return currentUser;
+    }
+
+    // ==========================================
+    // 설명 및 도감 모달 UI 이벤트
+    // ==========================================
+    const modalRules = document.getElementById("modal-rules");
+    const modalCatalog = document.getElementById("modal-catalog");
+    const catalogList = document.getElementById("catalog-list");
+
+    function renderCatalogItems() {
+      catalogList.innerHTML = "";
+      Object.values(CARD_CATALOG).forEach(item => {
+        const row = document.createElement("div");
+        row.style.borderBottom = "1px solid var(--panel-border)";
+        row.style.padding = "8px 0";
+        row.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <strong style="color:var(--text-main); font-size:0.95rem;">${item.name}</strong>
+            <span style="color:var(--gold-color); font-weight:bold;">★ ${item.cost} (${item.type})</span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">${item.desc}</div>
+        `;
+        catalogList.appendChild(row);
+      });
+    }
+    renderCatalogItems();
+
+    document.getElementById("btn-open-rules").addEventListener("click", () => modalRules.classList.remove("hidden"));
+    document.getElementById("btn-close-rules").addEventListener("click", () => modalRules.classList.add("hidden"));
+    document.getElementById("btn-open-catalog").addEventListener("click", () => modalCatalog.classList.remove("hidden"));
+    document.getElementById("btn-close-catalog").addEventListener("click", () => modalCatalog.classList.add("hidden"));
+    document.getElementById("btn-in-game-rules").addEventListener("click", () => modalCatalog.classList.remove("hidden"));
+
+    // ==========================================
+    // 방 생성 & 참가
+    // ==========================================
+    document.getElementById("btn-create-room").addEventListener("click", async () => {
+      try {
+        await ensureAuth();
+        const code = await generateUniqueRoomCode();
+        currentRoomCode = code;
+        myRole = "red";
+
+        const scheduledFirst = Math.random() < 0.5 ? "red" : "blue";
+        const shopCards = pickRandomShopCards();
+
+        const roomData = {
+          code: code,
+          createdAt: Date.now(),
+          status: "WAITING",
+          budget: selectedBudget,
+          scheduledFirst: scheduledFirst,
+          shopCards: shopCards,
+          turn: scheduledFirst,
+          turnCount: 0,
+          board: Array(16).fill(null),
+          lastMove: null,
+          red: {
+            uid: currentUser.uid,
+            name: getNickname(),
+            stars: selectedBudget,
+            ready: false,
+            cards: {},
+            usedCards: {}
+          },
+          blue: null,
+          winner: null,
+          finishReason: ""
+        };
+
+        roomRef = ref(db, `${DB_ROOT}/${code}`);
+        await set(roomRef, roomData);
+        onDisconnect(roomRef).remove();
+
+        document.getElementById("display-room-code").textContent = code;
+        waitingPanel.classList.remove("hidden");
+        listenToRoom(code);
+      } catch (err) {
+        alert("방 생성 실패: " + err.message);
+      }
+    });
+
+    document.getElementById("btn-join-room").addEventListener("click", async () => {
+      const code = document.getElementById("input-room-code").value.trim();
+      if (!code || code.length !== 4) return alert("4자리 방 코드를 입력하세요.");
+
+      try {
+        await ensureAuth();
+        const snap = await get(ref(db, `${DB_ROOT}/${code}`));
+        if (!snap.exists()) return alert("존재하지 않는 방입니다.");
+        const data = snap.val();
+        if (data.blue && data.blue.uid !== currentUser.uid) {
+          return alert("이미 참여자가 존재하는 방입니다.");
+        }
+
+        currentRoomCode = code;
+        myRole = "blue";
+        roomRef = ref(db, `${DB_ROOT}/${code}`);
+
+        await update(roomRef, {
+          blue: {
+            uid: currentUser.uid,
+            name: getNickname(),
+            stars: data.budget,
+            ready: false,
+            cards: {},
+            usedCards: {}
+          },
+          status: "SHOPPING",
+          shopStartTime: Date.now()
+        });
+
+        listenToRoom(code);
+      } catch (err) {
+        alert("입장 실패: " + err.message);
+      }
+    });
+
+    // ==========================================
+    // 실시간 방 동기화 리스너
+    // ==========================================
+    function listenToRoom(code) {
+      if (roomListener) roomListener();
+      const rRef = ref(db, `${DB_ROOT}/${code}`);
+
+      roomListener = onValue(rRef, (snap) => {
+        if (!snap.exists()) {
+          alert("방 세션이 종료되었거나 폭파되었습니다.");
+          location.reload();
+          return;
+        }
+        const data = snap.val();
+        renderGame(data);
+      });
+    }
+
+    // ==========================================
+    // 렌더링 총괄
+    // ==========================================
+    function renderGame(data) {
+      authScreen.classList.add("hidden");
+      gameScreen.classList.remove("hidden");
+
+      document.getElementById("red-name").textContent = data.red?.name || "홍팀";
+      document.getElementById("red-stars").textContent = `★ ${data.red?.stars ?? 0}`;
+      document.getElementById("blue-name").textContent = data.blue?.name || "청팀";
+      document.getElementById("blue-stars").textContent = `★ ${data.blue?.stars ?? 0}`;
+
+      if (data.status === "WAITING") {
+        waitingPanel.classList.remove("hidden");
+        document.getElementById("match-phase").textContent = "대기실";
+        document.getElementById("turn-indicator").textContent = "상대 입장 대기 중";
+        return;
+      }
+
+      if (data.status === "SHOPPING") {
+        waitingPanel.classList.add("hidden");
+        shopContainer.classList.remove("hidden");
+        boardContainer.classList.add("hidden");
+        document.getElementById("match-phase").textContent = "상점 페이즈 (30초)";
+        renderShop(data);
+        return;
+      }
+
+      if (data.status === "PLAYING") {
+        shopContainer.classList.add("hidden");
+        boardContainer.classList.remove("hidden");
+        document.getElementById("match-phase").textContent = `전투 (${data.turnCount}/80턴)`;
+        
+        const isMyTurn = data.turn === myRole;
+        document.getElementById("turn-indicator").textContent = isMyTurn ? "👉 나의 턴" : "상대방 고민 중...";
+        document.getElementById("turn-indicator").style.color = data.turn === "red" ? "var(--red-color)" : "var(--blue-color)";
+
+        renderBoard(data);
+        renderHandCards(data);
+        return;
+      }
+
+      if (data.status === "FINISHED") {
+        renderBoard(data);
+        showResultModal(data);
+      }
+    }
+
+    // ==========================================
+    // 상점 페이즈 로직
+    // ==========================================
+    function renderShop(data) {
+      const shopDiv = document.getElementById("shop-cards");
+      shopDiv.innerHTML = "";
+      const myData = data[myRole];
+      const maxBudget = data.budget;
+
+      let totalSelectedCost = 0;
+      localSelectedCards.forEach(id => {
+        totalSelectedCost += CARD_CATALOG[id].cost;
+      });
+      document.getElementById("my-cart-cost").textContent = totalSelectedCost;
+
+      data.shopCards.forEach(cardId => {
+        const item = CARD_CATALOG[cardId];
+        const isSelected = localSelectedCards.has(cardId);
+
+        const cardRow = document.createElement("div");
+        cardRow.className = `card-item ${isSelected ? "active" : ""}`;
+        cardRow.innerHTML = `
+          <div class="card-info">
+            <div class="card-title">${item.name} <span class="card-cost">★ ${item.cost}</span></div>
+            <div class="card-desc">${item.desc}</div>
+          </div>
+          <button class="card-btn ${isSelected ? "btn-gold" : ""}" ${myData.ready ? "disabled" : ""}>
+            ${isSelected ? "선택됨" : "담기"}
+          </button>
+        `;
+
+        cardRow.querySelector("button").addEventListener("click", () => {
+          if (myData.ready) return;
+          if (isSelected) {
+            localSelectedCards.delete(cardId);
+          } else {
+            if (totalSelectedCost + item.cost > maxBudget) {
+              return alert("예산(별)이 부족합니다.");
+            }
+            localSelectedCards.add(cardId);
+          }
+          renderShop(data);
+        });
+
+        shopDiv.appendChild(cardRow);
+      });
+
+      const confirmBtn = document.getElementById("btn-confirm-purchase");
+      if (myData.ready) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "상대방 구매 대기 중...";
+      } else {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = `구매 확정 (${totalSelectedCost}별 소모)`;
+      }
+
+      if (!shopCountdownTimer && data.shopStartTime) {
+        shopCountdownTimer = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - data.shopStartTime) / 1000);
+          const remain = Math.max(0, 30 - elapsed);
+          document.getElementById("turn-indicator").textContent = `남은 시간 ${remain}s`;
+          if (remain <= 0) {
+            clearInterval(shopCountdownTimer);
+            shopCountdownTimer = null;
+            if (!myData.ready) finalizePurchase();
+          }
+        }, 500);
+      }
+    }
+
+    document.getElementById("btn-confirm-purchase").addEventListener("click", finalizePurchase);
+
+    async function finalizePurchase() {
+      if (!currentRoomCode || !myRole) return;
+      const snap = await get(ref(db, `${DB_ROOT}/${currentRoomCode}`));
+      if (!snap.exists()) return;
+      const data = snap.val();
+
+      let spent = 0;
+      const myCardsObj = {};
+      localSelectedCards.forEach(id => {
+        spent += CARD_CATALOG[id].cost;
+        myCardsObj[id] = true;
+      });
+
+      const remainStars = data.budget - spent;
+      const updates = {};
+      updates[`${myRole}/ready`] = true;
+      updates[`${myRole}/stars`] = remainStars;
+      updates[`${myRole}/cards`] = myCardsObj;
+
+      const otherRole = myRole === "red" ? "blue" : "red";
+      if (data[otherRole]?.ready) {
+        updates["status"] = "PLAYING";
+        applyOpeningsAndStart(data, updates, myCardsObj, data[otherRole].cards);
+      }
+
+      await update(roomRef, updates);
+    }
+
+    function applyOpeningsAndStart(data, updates, redCards, blueCards) {
+      let board = [...data.board];
+      const hasRedCenter = !!redCards["center"];
+      const hasBlueCenter = !!blueCards["center"];
+      const hasRedCorner = !!redCards["corner"];
+      const hasBlueCorner = !!blueCards["corner"];
+
+      const centerIndices = [5, 6, 9, 10];
+      const cornerIndices = [0, 3, 12, 15];
+
+      let redFreeMarks = 0;
+      let blueFreeMarks = 0;
+
+      if (hasRedCenter) {
+        const freeCenters = centerIndices.filter(i => board[i] === null);
+        if (freeCenters.length > 0) {
+          const target = freeCenters[Math.floor(Math.random() * freeCenters.length)];
+          board[target] = { mark: "X", stealth: false };
+          redFreeMarks++;
+        }
+      }
+      if (hasBlueCenter) {
+        const freeCenters = centerIndices.filter(i => board[i] === null);
+        if (freeCenters.length > 0) {
+          const target = freeCenters[Math.floor(Math.random() * freeCenters.length)];
+          board[target] = { mark: "O", stealth: false };
+          blueFreeMarks++;
+        }
+      }
+      if (hasRedCorner) {
+        const freeCorners = cornerIndices.filter(i => board[i] === null);
+        if (freeCorners.length > 0) {
+          const target = freeCorners[Math.floor(Math.random() * freeCorners.length)];
+          board[target] = { mark: "X", stealth: false };
+          redFreeMarks++;
+        }
+      }
+      if (hasBlueCorner) {
+        const freeCorners = cornerIndices.filter(i => board[i] === null);
+        if (freeCorners.length > 0) {
+          const target = freeCorners[Math.floor(Math.random() * freeCorners.length)];
+          board[target] = { mark: "O", stealth: false };
+          blueFreeMarks++;
+        }
+      }
+
+      updates["board"] = board;
+
+      let actualFirst = data.scheduledFirst;
+      if (redFreeMarks > 0 && blueFreeMarks === 0) {
+        actualFirst = "blue";
+      } else if (blueFreeMarks > 0 && redFreeMarks === 0) {
+        actualFirst = "red";
+      }
+      updates["turn"] = actualFirst;
+    }
+
+    // ==========================================
+    // 보드 및 카드 렌더링
+    // ==========================================
+    function renderBoard(data) {
+      boardEl.innerHTML = "";
+      data.board.forEach((cellData, index) => {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.dataset.index = index;
+
+        if (cellData) {
+          cell.classList.add("occupied");
+          if (cellData.stealth) {
+            const isOwner = (myRole === "red" && cellData.mark === "X") || (myRole === "blue" && cellData.mark === "O");
+            if (isOwner || data.status === "FINISHED") {
+              cell.textContent = cellData.mark;
+              cell.classList.add(`mark-${cellData.mark}`, "mark-stealth");
+            }
+          } else {
+            cell.textContent = cellData.mark;
+            cell.classList.add(`mark-${cellData.mark}`);
+          }
+        }
+
+        cell.addEventListener("click", () => handleCellClick(index, data));
+        boardEl.appendChild(cell);
+      });
+    }
+
+    function renderHandCards(data) {
+      const container = document.getElementById("my-hand-cards");
+      container.innerHTML = "";
+      const myCards = data[myRole]?.cards || {};
+      const usedCards = data[myRole]?.usedCards || {};
+      const isMyTurn = data.turn === myRole && data.status === "PLAYING";
+
+      Object.keys(myCards).forEach(cardId => {
+        const card = CARD_CATALOG[cardId];
+        if (card.type === "오프닝") return;
+
+        const isUsed = !!usedCards[cardId];
+        const isPassive = card.type === "패시브";
+
+        const cardRow = document.createElement("div");
+        cardRow.className = `card-item ${selectedActionCard === cardId ? "active" : ""}`;
+        cardRow.innerHTML = `
+          <div class="card-info">
+            <div class="card-title">${card.name} <span style="font-size:0.75rem; color:var(--text-muted);">[${card.type}]</span></div>
+            <div class="card-desc">${card.desc}</div>
+          </div>
+          <button class="card-btn ${isUsed ? "" : "btn-gold"}" ${isUsed || !isMyTurn || isPassive ? "disabled" : ""}>
+            ${isUsed ? "사용완료" : isPassive ? "자동발동" : "사용"}
+          </button>
+        `;
+
+        if (!isUsed && !isPassive && isMyTurn) {
+          cardRow.querySelector("button").addEventListener("click", () => {
+            triggerActionCardSelect(cardId, data);
+          });
+        }
+
+        container.appendChild(cardRow);
+      });
+    }
+
+    // ==========================================
+    // 카드 액션 컨트롤
+    // ==========================================
+    function triggerActionCardSelect(cardId, data) {
+      if (selectedActionCard === cardId) {
+        cancelAction();
+        return;
+      }
+      selectedActionCard = cardId;
+      actionSubStep = "select_target";
+      tempSwapSource = null;
+
+      const guideBox = document.getElementById("action-guidance");
+      const guideText = document.getElementById("action-text");
+      const pushBtns = document.getElementById("push-top-btns");
+
+      guideBox.classList.remove("hidden");
+      pushBtns.classList.add("hidden");
+
+      if (cardId === "move") {
+        guideText.textContent = "[이동] 이동시킬 내 마크를 선택하세요.";
+      } else if (cardId === "erase") {
+        guideText.textContent = "[지우개] 제거할 상대 마크를 선택하세요.";
+      } else if (cardId === "double_tap") {
+        guideText.textContent = "[더블 탭] 마크 2개를 차례로 배치하세요 (1/2).";
+        doubleTapCount = 0;
+      } else if (cardId === "swap") {
+        guideText.textContent = "[교환] 내 마크를 먼저 선택하세요.";
+      } else if (cardId === "seal") {
+        guideText.textContent = "[봉인석] 봉인석을 둘 빈 칸을 선택하세요.";
+      } else if (cardId === "hijack") {
+        guideText.textContent = "[강탈] 내 것으로 바꿀 상대 마크를 선택하세요.";
+      } else if (cardId === "bomb") {
+        guideText.textContent = "[폭탄] 폭파 중심 칸을 선택하세요 (십자 폭파).";
+      } else if (cardId === "undo") {
+        guideText.textContent = "[되돌리기] 직전 상대 마크를 누르면 제거되고 턴 소모 없이 착수 가능합니다.";
+      } else if (cardId === "stealth") {
+        guideText.textContent = "[은신] 상대에게 숨길 마크를 배치할 빈 칸을 누르세요.";
+      } else if (cardId === "push") {
+        guideText.textContent = "[줄 밀기] 아래로 밀어낼 열(1~4열)의 버튼을 누르세요.";
+        pushBtns.classList.remove("hidden");
+      }
+    }
+
+    document.getElementById("btn-cancel-action").addEventListener("click", cancelAction);
+
+    function cancelAction() {
+      selectedActionCard = null;
+      actionSubStep = null;
+      tempSwapSource = null;
+      doubleTapCount = 0;
+      document.getElementById("action-guidance").classList.add("hidden");
+      document.getElementById("push-top-btns").classList.add("hidden");
+      document.querySelectorAll(".cell").forEach(c => c.classList.remove("selected", "target-valid"));
+    }
+
+    // ==========================================
+    // 착수 및 액션 처리
+    // ==========================================
+    async function handleCellClick(index, data) {
+      if (data.status !== "PLAYING") return;
+      if (data.turn !== myRole) return alert("당신의 턴이 아닙니다.");
+
+      const myMark = myRole === "red" ? "X" : "O";
+      const oppMark = myRole === "red" ? "O" : "X";
+      const currentCell = data.board[index];
+
+      // 은신 마크 발견 판정
+      if (currentCell && currentCell.stealth && currentCell.mark === oppMark) {
+        triggerFeedback("hit");
+        alert("상대의 은신 마크를 발견했습니다! 은신이 즉시 해제되며 다시 행동할 수 있습니다.");
+        const nextBoard = [...data.board];
+        nextBoard[index] = { mark: oppMark, stealth: false };
+        await update(roomRef, { board: nextBoard });
+        return;
+      }
+
+      if (!selectedActionCard) {
+        if (currentCell !== null) return alert("이미 마크가 있는 칸입니다.");
+        await executeNormalPlacement(index, data, myMark, false);
+        return;
+      }
+
+      const card = selectedActionCard;
+      let newBoard = [...data.board];
+      let endMyTurn = true;
+      let moveLog = "";
+
+      if (card === "double_tap") {
+        if (currentCell !== null) return alert("빈 칸을 선택하세요.");
+        newBoard[index] = { mark: myMark, stealth: false };
+        doubleTapCount++;
+        triggerFeedback();
+
+        if (doubleTapCount === 1) {
+          document.getElementById("action-text").textContent = "[더블 탭] 두 번째 마크를 놓으세요 (2/2).";
+          await update(roomRef, { board: newBoard });
+          return;
+        } else {
+          moveLog = `${myRole} 더블 탭 완료`;
+          endMyTurn = true;
+        }
+      } else if (card === "seal") {
+        if (currentCell !== null) return alert("빈 칸에만 봉인석을 둘 수 있습니다.");
+        newBoard[index] = { mark: "B", stealth: false };
+        moveLog = `${myRole} 봉인석 배치 (${index})`;
+      } else if (card === "stealth") {
+        if (currentCell !== null) return alert("빈 칸을 선택하세요.");
+        newBoard[index] = { mark: myMark, stealth: true };
+        moveLog = `${myRole} 은신 마크 배치`;
+      } else if (card === "erase") {
+        if (!currentCell || currentCell.mark !== oppMark) return alert("상대의 마크를 선택해야 합니다.");
+        newBoard[index] = null;
+        moveLog = `${myRole} 지우개 사용 (${index} 칸 제거)`;
+        triggerFeedback("hit");
+      } else if (card === "hijack") {
+        if (!currentCell || currentCell.mark !== oppMark) return alert("상대의 마크를 선택해야 합니다.");
+        newBoard[index] = { mark: myMark, stealth: false };
+        moveLog = `${myRole} 상대 마크 강탈 (${index})`;
+        triggerFeedback("hit");
+      } else if (card === "bomb") {
+        const r = Math.floor(index / 4);
+        const c = index % 4;
+        const targets = [index];
+        if (r > 0) targets.push(index - 4);
+        if (r < 3) targets.push(index + 4);
+        if (c > 0) targets.push(index - 1);
+        if (c < 3) targets.push(index + 1);
+
+        targets.forEach(t => { newBoard[t] = null; });
+        moveLog = `${myRole} 폭탄 투하! (${targets.join(", ")} 칸 폭파)`;
+        triggerFeedback("hit");
+      } else if (card === "move") {
+        if (actionSubStep === "select_target") {
+          if (!currentCell || currentCell.mark !== myMark) return alert("이동시킬 내 마크를 선택하세요.");
+          tempSwapSource = index;
+          actionSubStep = "select_destination";
+          document.getElementById("action-text").textContent = "[이동] 상하좌우 빈 칸을 선택하세요.";
+          highlightMoveDestinations(index, data.board);
+          return;
+        } else {
+          if (!isAdjacent4(tempSwapSource, index) || currentCell !== null) {
+            return alert("상하좌우 인접한 빈 칸으로만 이동 가능합니다.");
+          }
+          newBoard[index] = newBoard[tempSwapSource];
+          newBoard[tempSwapSource] = null;
+          moveLog = `${myRole} 마크 이동 (${tempSwapSource} -> ${index})`;
+        }
+      } else if (card === "swap") {
+        if (actionSubStep === "select_target") {
+          if (!currentCell || currentCell.mark !== myMark) return alert("교환할 내 마크를 선택하세요.");
+          tempSwapSource = index;
+          actionSubStep = "select_destination";
+          document.getElementById("action-text").textContent = "[교환] 대각선 포함 인접 8방향 상대 마크를 선택하세요.";
+          return;
+        } else {
+          if (!isAdjacent8(tempSwapSource, index) || !currentCell || currentCell.mark !== oppMark) {
+            return alert("대각선을 포함한 인접 8방향의 상대 마크만 교환 가능합니다.");
+          }
+          const temp = newBoard[tempSwapSource];
+          newBoard[tempSwapSource] = newBoard[index];
+          newBoard[index] = temp;
+          moveLog = `${myRole} 교환 발동 (${tempSwapSource} <-> ${index})`;
+          triggerFeedback();
+        }
+      } else if (card === "undo") {
+        if (!data.lastMove || data.lastMove.mark !== oppMark || data.lastMove.index !== index) {
+          return alert("직전 상대 턴에 새로 배치된 마지막 마크만 되돌릴 수 있습니다.");
+        }
+        newBoard[index] = null;
+        triggerFeedback("hit");
+        logMessage(`[되돌리기] 상대 마크를 제거했습니다. 턴 소모 없이 일반 마크를 착수하세요.`);
+        
+        const usedUpdates = {};
+        usedUpdates[`${myRole}/usedCards/${card}`] = true;
+        usedUpdates["board"] = newBoard;
+        usedUpdates["lastMove"] = null;
+        cancelAction();
+        await update(roomRef, usedUpdates);
+        return;
+      }
+
+      const updates = {};
+      updates[`${myRole}/usedCards/${card}`] = true;
+      updates["board"] = newBoard;
+      cancelAction();
+
+      await commitTurn(updates, newBoard, data, endMyTurn, moveLog);
+    }
+
+    // 줄 밀기 핸들러
+    document.querySelectorAll(".push-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!selectedActionCard || selectedActionCard !== "push") return;
+        const col = parseInt(btn.dataset.col, 10);
+        
+        const snap = await get(roomRef);
+        const data = snap.val();
+        let board = [...data.board];
+
+        const c0 = board[col];
+        const c1 = board[col + 4];
+        const c2 = board[col + 8];
+        const c3 = board[col + 12];
+
+        board[col] = c3;
+        board[col + 4] = c0;
+        board[col + 8] = c1;
+        board[col + 12] = c2;
+
+        const updates = {};
+        updates[`${myRole}/usedCards/push`] = true;
+        updates["board"] = board;
+        cancelAction();
+
+        await commitTurn(updates, board, data, true, `${myRole} ${col + 1}열 순환 줄 밀기`);
+      });
+    });
+
+    async function executeNormalPlacement(index, data, myMark, isStealth) {
+      const newBoard = [...data.board];
+      newBoard[index] = { mark: myMark, stealth: isStealth };
+      triggerFeedback();
+
+      const updates = {
+        board: newBoard,
+        lastMove: { index: index, mark: myMark }
+      };
+
+      await commitTurn(updates, newBoard, data, true, `${myRole} 착수 (${index})`);
+    }
+
+    // ==========================================
+    // 턴 교대 및 승패/방패 판정
+    // ==========================================
+    async function commitTurn(updates, board, currentData, switchTurn, logText) {
+      if (logText) logMessage(logText);
+
+      let winResult = evaluateWinCondition(board);
+      const nextRole = myRole === "red" ? "blue" : "red";
+
+      // 방패 패시브 판정
+      if (winResult.winner === myRole) {
+        const defender = nextRole;
+        const defenderCards = currentData[defender]?.cards || {};
+        const defenderUsed = currentData[defender]?.usedCards || {};
+
+        if (defenderCards["shield"] && !defenderUsed["shield"]) {
+          const removeIdx = winResult.line[0];
+          board[removeIdx] = null;
+          updates["board"] = board;
+          updates[`${defender}/usedCards/shield`] = true;
+          logMessage(`🛡️ [방패] ${defender}의 방패가 자동 발동되어 위기를 넘겼습니다!`);
+          triggerFeedback("hit");
+
+          winResult = evaluateWinCondition(board);
+        }
+      }
+
+      if (winResult.winner) {
+        updates["status"] = "FINISHED";
+        updates["winner"] = winResult.winner;
+        updates["finishReason"] = `${winResult.winner === "red" ? "홍팀(X)" : "청팀(O)"}의 3목 완성 승리!`;
+        await update(roomRef, updates);
+        return;
+      }
+
+      const isFull = board.every(cell => cell !== null);
+      const newTurnCount = (currentData.turnCount || 0) + 1;
+      updates["turnCount"] = newTurnCount;
+
+      if (isFull || newTurnCount >= 80) {
+        updates["status"] = "FINISHED";
+        const redStars = currentData.red.stars;
+        const blueStars = currentData.blue.stars;
+        
+        if (redStars > blueStars) {
+          updates["winner"] = "red";
+          updates["finishReason"] = `보드 무승부! 잔여 별 우세로 홍팀 최종 승리 (★${redStars} vs ★${blueStars})`;
+        } else if (blueStars > redStars) {
+          updates["winner"] = "blue";
+          updates["finishReason"] = `보드 무승부! 잔여 별 우세로 청팀 최종 승리 (★${blueStars} vs ★${redStars})`;
+        } else {
+          updates["winner"] = "draw";
+          updates["finishReason"] = `보드 및 잔여 별 모두 동률! 최종 무승부 (★${redStars})`;
+        }
+        await update(roomRef, updates);
+        return;
+      }
+
+      if (switchTurn) {
+        updates["turn"] = nextRole;
+      }
+      await update(roomRef, updates);
+    }
+
+    function evaluateWinCondition(board) {
+      const lines = [
+        [0,1,2], [1,2,3], [4,5,6], [5,6,7], [8,9,10], [9,10,11], [12,13,14], [13,14,15],
+        [0,4,8], [4,8,12], [1,5,9], [5,9,13], [2,6,10], [6,10,14], [3,7,11], [7,11,15],
+        [0,5,10], [5,10,15], [1,6,11], [4,9,14],
+        [2,5,8], [3,6,9], [6,9,12], [7,10,13]
+      ];
+
+      for (const line of lines) {
+        const [a, b, c] = line;
+        const cellA = board[a];
+        const cellB = board[b];
+        const cellC = board[c];
+
+        if (cellA && cellB && cellC && cellA.mark !== "B") {
+          if (cellA.mark === cellB.mark && cellB.mark === cellC.mark) {
+            return {
+              winner: cellA.mark === "X" ? "red" : "blue",
+              line: line
+            };
+          }
+        }
+      }
+      return { winner: null, line: [] };
+    }
+
+    function isAdjacent4(idx1, idx2) {
+      const r1 = Math.floor(idx1 / 4), c1 = idx1 % 4;
+      const r2 = Math.floor(idx2 / 4), c2 = idx2 % 4;
+      return (Math.abs(r1 - r2) + Math.abs(c1 - c2)) === 1;
+    }
+
+    function isAdjacent8(idx1, idx2) {
+      const r1 = Math.floor(idx1 / 4), c1 = idx1 % 4;
+      const r2 = Math.floor(idx2 / 4), c2 = idx2 % 4;
+      return Math.max(Math.abs(r1 - r2), Math.abs(c1 - c2)) === 1;
+    }
+
+    function highlightMoveDestinations(sourceIdx, board) {
+      document.querySelectorAll(".cell").forEach(cell => {
+        const idx = parseInt(cell.dataset.index, 10);
+        if (isAdjacent4(sourceIdx, idx) && board[idx] === null) {
+          cell.classList.add("target-valid");
+        }
+      });
+    }
+
+    function logMessage(msg) {
+      const p = document.createElement("p");
+      p.textContent = msg;
+      logsBox.appendChild(p);
+      logsBox.scrollTop = logsBox.scrollHeight;
+    }
+
+    // ==========================================
+    // 게임 종료 및 승리자 기기 5초 후 자동 방폭
+    // ==========================================
+    function showResultModal(data) {
+      const modal = document.getElementById("modal-result");
+      const title = document.getElementById("modal-title");
+      const reason = document.getElementById("modal-reason");
+      const starsInfo = document.getElementById("modal-stars-info");
+
+      modal.classList.remove("hidden");
+      triggerFeedback("hit");
+
+      if (data.winner === myRole) {
+        title.textContent = "🏆 당신의 승리!";
+        title.style.color = "var(--gold-color)";
+      } else if (data.winner === "draw") {
+        title.textContent = "🤝 무승부";
+        title.style.color = "var(--text-main)";
+      } else {
+        title.textContent = "💀 패배...";
+        title.style.color = "var(--red-color)";
+      }
+
+      reason.textContent = data.finishReason || "게임이 종료되었습니다.";
+      starsInfo.textContent = `최종 잔여 별 - 홍팀: ★${data.red?.stars || 0} | 청팀: ★${data.blue?.stars || 0}`;
+
+      if (data.winner === myRole && roomRef) {
+        setTimeout(async () => {
+          try {
+            await remove(roomRef);
+          } catch (e) {
+            console.error("방 정리 에러:", e);
+          }
+        }, 5000);
+      }
+    }
+
+    document.getElementById("btn-surrender").addEventListener("click", async () => {
+      if (!confirm("정말 기권하시겠습니까?")) return;
+      if (!roomRef) return;
+      const otherRole = myRole === "red" ? "blue" : "red";
+      await update(roomRef, {
+        status: "FINISHED",
+        winner: otherRole,
+        finishReason: `${myRole === "red" ? "홍팀" : "청팀"}의 기권으로 인한 패배`
+      });
+    });
+
+    document.getElementById("btn-exit").addEventListener("click", () => {
+      if (confirm("대기실로 돌아가시겠습니까?")) {
+        location.reload();
+      }
+    });
+
+    document.getElementById("btn-admin-reset").addEventListener("click", async () => {
+      const pass = document.getElementById("admin-pass").value;
+      if (pass !== "reset") {
+        return alert("마스터키가 올바르지 않습니다.");
+      }
+      if (confirm("경고: 전체 방 노드를 완전 삭제하시겠습니까?")) {
+        await remove(ref(db, DB_ROOT));
+        alert("전체 방이 초기화되었습니다.");
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>
