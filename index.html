@@ -484,12 +484,12 @@
     </div>
 
     <div class="admin-bar">
-      <input type="password" id="admin-pass" placeholder="방폭 마스터키 (기본: reset1234)">
+      <input type="password" id="admin-pass" placeholder="마스터 비밀번호">
       <button id="btn-admin-reset" class="btn-red">전체 초기화</button>
     </div>
   </div>
 
-  <!-- 대기실 화면 (방 번호 전용 표시) -->
+  <!-- 대기실 화면 -->
   <div id="waiting-screen" class="container hidden">
     <h1>대기실</h1>
     <p class="desc">상대방에게 아래 번호를 알려주세요</p>
@@ -505,7 +505,7 @@
     <button id="btn-cancel-waiting" style="background: #334155;">방 생성 취소</button>
   </div>
 
-  <!-- 메인 게임 화면 (상점 & 전투) -->
+  <!-- 메인 게임 화면 -->
   <div id="game-screen" class="container hidden">
     <div class="hud">
       <div class="player-badge red-side">
@@ -559,7 +559,7 @@
     <div style="display: flex; gap: 8px;">
       <button id="btn-in-game-rules" style="background: #334155; font-size: 0.8rem; padding: 8px;">도감/설명</button>
       <button id="btn-surrender" style="background: #334155; font-size: 0.8rem; padding: 8px;">항복(기권)</button>
-      <button id="btn-exit" style="background: #334155; font-size: 0.8rem; padding: 8px;">나가기</button>
+      <button id="btn-exit" style="background: #334155; font-size: 0.8rem; padding: 8px;">방 나가기</button>
     </div>
   </div>
 
@@ -601,7 +601,7 @@
       <h2 id="modal-title">대전 종료</h2>
       <p id="modal-reason" style="font-size: 0.95rem; margin: 12px 0; color: var(--text-muted);"></p>
       <div id="modal-stars-info" style="font-size: 0.85rem; margin-bottom: 14px; color: var(--gold-color);"></div>
-      <p style="font-size: 0.75rem; color: var(--text-muted);">5초 후 방이 자동으로 폭파 정리되며 대기실로 복귀합니다.</p>
+      <button id="btn-confirm-end" class="btn-gold" style="margin-bottom: 0;">대기실로 복귀</button>
     </div>
   </div>
 
@@ -621,6 +621,7 @@
   messagingSenderId: "1146329001",
   appId: "1:1146329001:web:f2d698e5661582ee1f96b8"
 };
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
@@ -809,7 +810,7 @@
         if (!snap.exists()) return alert("존재하지 않는 방입니다.");
         const data = snap.val();
         if (data.blue && data.blue.uid !== currentUser.uid) {
-          return alert("이미 참여자가 존재하는 방입니다.");
+          return alert("이미 참가자가 가득 찬 방입니다.");
         }
 
         currentRoomCode = code;
@@ -841,7 +842,6 @@
 
       roomListener = onValue(rRef, (snap) => {
         if (!snap.exists()) {
-          alert("방 세션이 종료되었거나 폭파되었습니다.");
           location.reload();
           return;
         }
@@ -908,10 +908,16 @@
       });
       document.getElementById("my-cart-cost").textContent = totalSelectedCost;
 
-      data.shopCards.forEach(cardId => {
-        const item = CARD_CATALOG[cardId];
-        const isSelected = localSelectedCards.has(cardId);
+      // Firebase RTDB의 객체/배열 변환 호환성 보장
+      const cardList = Array.isArray(data.shopCards) 
+        ? data.shopCards 
+        : Object.values(data.shopCards || {});
 
+      cardList.forEach(cardId => {
+        const item = CARD_CATALOG[cardId];
+        if (!item) return;
+
+        const isSelected = localSelectedCards.has(cardId);
         const cardRow = document.createElement("div");
         cardRow.className = `card-item ${isSelected ? "active" : ""}`;
         cardRow.innerHTML = `
@@ -1473,40 +1479,41 @@
       reason.textContent = data.finishReason || "게임이 종료되었습니다.";
       starsInfo.textContent = `최종 잔여 별 - 홍팀: ★${data.red?.stars || 0} | 청팀: ★${data.blue?.stars || 0}`;
 
-      if (data.winner === myRole && roomRef) {
-        setTimeout(async () => {
-          try {
-            await remove(roomRef);
-          } catch (e) {
-            console.error("방 정리 에러:", e);
-          }
-        }, 5000);
-      }
+      // 결과 확인 시 즉시 방폭 및 복귀 버튼 바인딩
+      document.getElementById("btn-confirm-end").onclick = async () => {
+        if (roomRef) {
+          try { await remove(roomRef); } catch(e){}
+        }
+        location.reload();
+      };
     }
 
+    // 항복 시 즉각 방폭 후 대기실 복귀
     document.getElementById("btn-surrender").addEventListener("click", async () => {
-      if (!confirm("정말 기권하시겠습니까?")) return;
-      if (!roomRef) return;
-      const otherRole = myRole === "red" ? "blue" : "red";
-      await update(roomRef, {
-        status: "FINISHED",
-        winner: otherRole,
-        finishReason: `${myRole === "red" ? "홍팀" : "청팀"}의 기권으로 인한 패배`
-      });
+      if (!confirm("정말 기권하시겠습니까? 방이 즉시 삭제됩니다.")) return;
+      if (roomRef) {
+        await remove(roomRef);
+      }
+      location.reload();
     });
 
-    document.getElementById("btn-exit").addEventListener("click", () => {
-      if (confirm("대기실로 돌아가시겠습니까?")) {
+    // 나가기 클릭 시 즉시 방 삭제 후 대기실 복귀
+    document.getElementById("btn-exit").addEventListener("click", async () => {
+      if (confirm("방을 나가시겠습니까? 현재 게임이 즉시 종료됩니다.")) {
+        if (roomRef) {
+          await remove(roomRef);
+        }
         location.reload();
       }
     });
 
+    // 관리자 마스터키 전체 초기화
     document.getElementById("btn-admin-reset").addEventListener("click", async () => {
       const pass = document.getElementById("admin-pass").value;
-      if (pass !== "reset") {
-        return alert("마스터키가 올바르지 않습니다.");
+      if (pass !== "reset1234") {
+        return alert("비밀번호가 올바르지 않습니다.");
       }
-      if (confirm("경고: 전체 방 노드를 완전 삭제하시겠습니까?")) {
+      if (confirm("전체 게임 데이터를 초기화하시겠습니까?")) {
         await remove(ref(db, DB_ROOT));
         alert("전체 방이 초기화되었습니다.");
         location.reload();
