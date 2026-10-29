@@ -6,15 +6,16 @@
   <title>증강 틱택토 1대1 (Augmented Tic-Tac-Toe)</title>
   <style>
     :root {
-      --bg-color: #0f172a;
-      --panel-bg: #1e293b;
-      --panel-border: #334155;
-      --red-color: #ef4444;
-      --red-glow: rgba(239, 68, 68, 0.4);
-      --blue-color: #3b82f6;
-      --blue-glow: rgba(59, 130, 246, 0.4);
-      --gold-color: #f59e0b;
-      --neutral-stone: #64748b;
+      --bg-gradient: radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 60%, #050814 100%);
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --panel-border: rgba(255, 255, 255, 0.12);
+      --red-color: #f43f5e;
+      --red-glow: 0 0 15px rgba(244, 63, 94, 0.6);
+      --blue-color: #38bdf8;
+      --blue-glow: 0 0 15px rgba(56, 189, 248, 0.6);
+      --gold-color: #fbbf24;
+      --gold-glow: 0 0 15px rgba(251, 191, 36, 0.5);
+      --neutral-stone: #94a3b8;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -25,18 +26,18 @@
       padding: 0;
       user-select: none;
       -webkit-user-select: none;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
     }
 
     body {
-      background-color: var(--bg-color);
+      background: var(--bg-gradient);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 12px;
+      padding: 14px;
       overflow-x: hidden;
       transition: background-color 0.2s ease;
     }
@@ -45,88 +46,106 @@
       display: none !important;
     }
 
-    /* 시각 피드백 */
     .screen-shake {
       animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
     }
     @keyframes shake {
-      10%, 90% { transform: translate3d(-2px, -1px, 0); }
-      20%, 80% { transform: translate3d(3px, 2px, 0); }
-      30%, 50%, 70% { transform: translate3d(-5px, -3px, 0); }
-      40%, 60% { transform: translate3d(5px, 3px, 0); }
+      10%, 90% { transform: translate3d(-3px, -2px, 0); }
+      20%, 80% { transform: translate3d(4px, 3px, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, -4px, 0); }
+      40%, 60% { transform: translate3d(6px, 4px, 0); }
     }
 
     .hit-flash {
       animation: flash 0.3s ease;
     }
     @keyframes flash {
-      0% { background-color: rgba(239, 68, 68, 0.6); }
-      100% { background-color: var(--bg-color); }
+      0% { background: rgba(244, 63, 94, 0.5); }
+      100% { background: var(--bg-gradient); }
     }
 
     .container {
       width: 100%;
       max-width: 480px;
       background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--panel-border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      border-radius: 24px;
+      padding: 22px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
-    h1, h2, h3 {
-      text-align: center;
-      margin-bottom: 12px;
-    }
     h1 {
-      font-size: 1.6rem;
-      color: var(--gold-color);
-      text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+      font-size: 1.8rem;
+      font-weight: 900;
+      text-align: center;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
     }
 
     .desc {
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       color: var(--text-muted);
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
     input, select, button {
       width: 100%;
-      padding: 12px;
+      padding: 13px 16px;
       margin-bottom: 10px;
-      border-radius: 8px;
+      border-radius: 12px;
       border: 1px solid var(--panel-border);
-      background: #0f172a;
+      background: rgba(15, 23, 42, 0.8);
       color: var(--text-main);
-      font-size: 1rem;
+      font-size: 0.95rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     input:focus, select:focus {
-      outline: 2px solid var(--gold-color);
+      outline: none;
+      border-color: var(--gold-color);
+      box-shadow: var(--gold-glow);
     }
 
     button {
       cursor: pointer;
-      font-weight: bold;
-      background: #334155;
-      transition: all 0.2s;
-      border: none;
+      font-weight: 700;
+      background: rgba(51, 65, 85, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
     button:hover:not(:disabled) {
       filter: brightness(1.2);
+      transform: translateY(-1px);
     }
     button:active:not(:disabled) {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    .btn-red { background: var(--red-color); color: #fff; }
-    .btn-blue { background: var(--blue-color); color: #fff; }
-    .btn-gold { background: var(--gold-color); color: #000; }
+    .btn-red {
+      background: linear-gradient(135deg, #f43f5e, #be123c);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+    }
+    .btn-blue {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+    }
 
     .menu-button-group {
       display: flex;
@@ -135,54 +154,61 @@
     }
     .menu-button-group button {
       margin-bottom: 0;
-      padding: 8px;
+      padding: 10px;
       font-size: 0.85rem;
-      background: #1e293b;
-      border: 1px solid var(--panel-border);
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 10px;
     }
 
-    /* 로비 예산 선택 */
     .budget-select {
       display: flex;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .budget-btn {
       flex: 1;
-      padding: 8px;
+      padding: 10px;
       font-size: 0.9rem;
+      border-radius: 10px;
       border: 1px solid var(--panel-border);
+      background: rgba(15, 23, 42, 0.6);
     }
     .budget-btn.active {
-      background: var(--gold-color);
+      background: linear-gradient(135deg, #fbbf24, #d97706);
       color: #000;
-      border-color: var(--gold-color);
+      border-color: transparent;
+      box-shadow: var(--gold-glow);
     }
 
     .room-info-card {
-      background: #0f172a;
-      border-radius: 8px;
-      padding: 14px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+      border: 2px solid var(--gold-color);
+      box-shadow: 0 0 30px rgba(251, 191, 36, 0.25);
+      border-radius: 20px;
+      padding: 24px;
       text-align: center;
-      margin-bottom: 12px;
+      margin: 16px 0;
     }
     .room-code-display {
-      font-size: 2rem;
-      letter-spacing: 4px;
+      font-size: 3.8rem;
+      letter-spacing: 8px;
       color: var(--gold-color);
       font-weight: 900;
-      margin: 8px 0;
+      margin: 12px 0;
+      text-shadow: var(--gold-glow);
+      font-family: monospace;
+      line-height: 1;
     }
 
-    /* HUD */
     .hud {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #0f172a;
-      padding: 10px 14px;
-      border-radius: 10px;
-      margin-bottom: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--panel-border);
+      padding: 12px 18px;
+      border-radius: 14px;
+      margin-bottom: 14px;
     }
     .player-badge {
       display: flex;
@@ -191,78 +217,96 @@
       font-size: 0.85rem;
     }
     .player-badge .mark {
-      font-size: 1.3rem;
+      font-size: 1.5rem;
       font-weight: 900;
+      line-height: 1;
+      margin-bottom: 4px;
     }
-    .red-side { color: var(--red-color); }
-    .blue-side { color: var(--blue-color); }
+    .red-side { color: var(--red-color); text-shadow: var(--red-glow); }
+    .blue-side { color: var(--blue-color); text-shadow: var(--blue-glow); }
     .hud-turn {
-      font-weight: 800;
-      font-size: 0.95rem;
       text-align: center;
     }
+    #match-phase {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #turn-indicator {
+      font-weight: 800;
+      font-size: 1.05rem;
+      margin-top: 2px;
+    }
 
-    /* 4x4 보드 */
     .board-wrapper {
       position: relative;
       width: 100%;
       aspect-ratio: 1;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .board {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       grid-template-rows: repeat(4, 1fr);
-      gap: 6px;
+      gap: 8px;
       width: 100%;
       height: 100%;
-      background: #0f172a;
-      padding: 6px;
-      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 8px;
+      border-radius: 18px;
       border: 1px solid var(--panel-border);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
     }
     .cell {
-      background: #1e293b;
-      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.8);
+      border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: 900;
       cursor: pointer;
-      transition: all 0.15s ease;
-      position: relative;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
     }
     .cell:hover:not(.occupied) {
-      background: #334155;
+      background: rgba(51, 65, 85, 0.9);
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.2);
     }
     .cell.selected {
       border: 2px solid var(--gold-color);
-      box-shadow: 0 0 8px var(--gold-color);
+      box-shadow: var(--gold-glow);
     }
     .cell.target-valid {
-      background: rgba(245, 158, 11, 0.25);
+      background: rgba(251, 191, 36, 0.2);
       border: 2px dashed var(--gold-color);
+      animation: pulse 1s infinite alternate;
     }
-    .cell.mark-X { color: var(--red-color); text-shadow: 0 0 10px var(--red-glow); }
-    .cell.mark-O { color: var(--blue-color); text-shadow: 0 0 10px var(--blue-glow); }
-    .cell.mark-B { color: var(--neutral-stone); }
-    .cell.mark-stealth { opacity: 0.75; font-style: italic; }
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+    .cell.mark-X { color: var(--red-color); text-shadow: var(--red-glow); }
+    .cell.mark-O { color: var(--blue-color); text-shadow: var(--blue-glow); }
+    .cell.mark-B { color: var(--neutral-stone); text-shadow: 0 0 10px rgba(148, 163, 184, 0.5); }
+    .cell.mark-stealth { opacity: 0.65; font-style: italic; filter: blur(0.5px); }
 
-    /* 줄 밀기 버튼 컨트롤 */
     .push-controls {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
+      gap: 8px;
       margin-bottom: 8px;
     }
     .push-btn {
-      padding: 6px 0;
+      padding: 8px 0;
       font-size: 0.8rem;
-      background: #334155;
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 8px;
     }
 
-    /* 카드 리스트 */
     .cards-scroll {
       display: flex;
       flex-direction: column;
@@ -272,23 +316,31 @@
       padding-right: 4px;
       margin-bottom: 12px;
     }
+    .cards-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .cards-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
     .card-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #0f172a;
-      padding: 8px 12px;
-      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.7);
+      padding: 10px 14px;
+      border-radius: 12px;
       border: 1px solid var(--panel-border);
-      font-size: 0.85rem;
+      transition: all 0.2s;
     }
     .card-item.active {
       border-color: var(--gold-color);
-      background: rgba(245, 158, 11, 0.1);
+      background: rgba(251, 191, 36, 0.1);
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
     }
     .card-info {
       flex: 1;
-      padding-right: 8px;
+      padding-right: 10px;
     }
     .card-title {
       font-weight: 700;
@@ -296,42 +348,45 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      font-size: 0.95rem;
     }
     .card-cost {
       color: var(--gold-color);
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 800;
     }
     .card-desc {
       font-size: 0.75rem;
       color: var(--text-muted);
+      margin-top: 2px;
     }
     .card-btn {
       width: auto;
-      padding: 6px 12px;
+      padding: 8px 14px;
       margin-bottom: 0;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
+      border-radius: 8px;
     }
 
-    /* 로그 창 */
     .log-box {
-      background: #0f172a;
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 0.75rem;
-      height: 70px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 0.78rem;
+      height: 75px;
       overflow-y: auto;
       color: var(--text-muted);
       border: 1px solid var(--panel-border);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      line-height: 1.4;
     }
     .log-box p {
-      margin-bottom: 3px;
+      margin-bottom: 4px;
     }
 
-    /* 관리자 바 */
     .admin-bar {
       margin-top: 15px;
-      padding-top: 10px;
+      padding-top: 12px;
       border-top: 1px dashed var(--panel-border);
       display: flex;
       gap: 8px;
@@ -340,20 +395,20 @@
       flex: 2;
       margin-bottom: 0;
       font-size: 0.8rem;
-      padding: 6px;
+      padding: 8px 12px;
     }
     .admin-bar button {
       flex: 1;
       margin-bottom: 0;
       font-size: 0.8rem;
-      padding: 6px;
+      padding: 8px 12px;
     }
 
-    /* 모달 공통 */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -361,31 +416,32 @@
       z-index: 1000;
     }
     .modal-content {
-      background: var(--panel-bg);
+      background: #1e293b;
       border: 1px solid var(--panel-border);
-      border-radius: 12px;
+      border-radius: 20px;
       width: 100%;
-      max-width: 450px;
+      max-width: 440px;
       max-height: 85vh;
       display: flex;
       flex-direction: column;
-      padding: 18px;
-      text-align: left;
+      padding: 22px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
     }
     .modal-body {
       overflow-y: auto;
-      margin: 12px 0;
-      font-size: 0.85rem;
-      line-height: 1.5;
+      margin: 14px 0;
+      font-size: 0.88rem;
+      line-height: 1.6;
       color: var(--text-muted);
-      padding-right: 4px;
+      padding-right: 6px;
     }
     .modal-body h4 {
       color: var(--gold-color);
-      margin: 10px 0 4px;
+      margin: 12px 0 4px;
+      font-size: 0.95rem;
     }
     .modal-body ul {
-      margin-left: 18px;
+      margin-left: 20px;
       margin-bottom: 8px;
     }
   </style>
@@ -401,12 +457,11 @@
 </head>
 <body>
 
-  <!-- 로비 및 로그인 화면 -->
+  <!-- 로비 화면 -->
   <div id="auth-screen" class="container">
     <h1>증강 틱택토 1대1</h1>
     <p class="desc">별을 모아 카드를 사고 4×4 3목 전장에 배치하라</p>
 
-    <!-- 설명 및 도감 호출 버튼 -->
     <div class="menu-button-group">
       <button id="btn-open-rules">📖 게임 설명</button>
       <button id="btn-open-catalog">🃏 증강 도감</button>
@@ -428,24 +483,30 @@
       <button id="btn-join-room" class="btn-blue" style="flex: 1;">입장 (청팀/O)</button>
     </div>
 
-    <!-- 대기 상태 패널 -->
-    <div id="waiting-panel" class="hidden" style="margin-top: 15px;">
-      <div class="room-info-card">
-        <div>상대방에게 아래 코드를 공유하세요</div>
-        <div id="display-room-code" class="room-code-display">----</div>
-        <div id="waiting-status" style="font-size: 0.85rem; color: var(--gold-color);">상대방 대기 중...</div>
-      </div>
-    </div>
-
     <div class="admin-bar">
-      <input type="password" id="admin-pass" placeholder="방폭 마스터키">
+      <input type="password" id="admin-pass" placeholder="방폭 마스터키 (기본: reset1234)">
       <button id="btn-admin-reset" class="btn-red">전체 초기화</button>
     </div>
   </div>
 
+  <!-- 대기실 화면 (방 번호 전용 표시) -->
+  <div id="waiting-screen" class="container hidden">
+    <h1>대기실</h1>
+    <p class="desc">상대방에게 아래 번호를 알려주세요</p>
+    
+    <div class="room-info-card">
+      <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: bold;">방 번호 4자리</div>
+      <div id="display-room-code" class="room-code-display">----</div>
+      <div id="waiting-status" style="font-size: 0.9rem; color: var(--gold-color);">
+        상대방 접속을 기다리는 중...
+      </div>
+    </div>
+
+    <button id="btn-cancel-waiting" style="background: #334155;">방 생성 취소</button>
+  </div>
+
   <!-- 메인 게임 화면 (상점 & 전투) -->
   <div id="game-screen" class="container hidden">
-    <!-- HUD -->
     <div class="hud">
       <div class="player-badge red-side">
         <span class="mark">X</span>
@@ -463,7 +524,7 @@
       </div>
     </div>
 
-    <!-- 상점 UI (구매 단계) -->
+    <!-- 상점 UI -->
     <div id="shop-container">
       <h3 style="font-size: 1rem; color: var(--gold-color);">비공개 증강 상점</h3>
       <p class="desc" style="margin-bottom: 8px;">동일 카드 5종 중 선택. 구매 확정 시 상대와 동시 공개</p>
@@ -471,9 +532,8 @@
       <button id="btn-confirm-purchase" class="btn-gold">구매 확정 (<span id="my-cart-cost">0</span>별 소모)</button>
     </div>
 
-    <!-- 4x4 보드 UI (전투 단계) -->
+    <!-- 보드 UI -->
     <div id="board-container" class="hidden">
-      <!-- 줄 밀기 상단 제어 버튼 -->
       <div id="push-top-btns" class="push-controls hidden">
         <button class="push-btn" data-col="0">↓ 1열</button>
         <button class="push-btn" data-col="1">↓ 2열</button>
@@ -485,18 +545,15 @@
         <div id="board" class="board"></div>
       </div>
 
-      <!-- 액션 안내/취소 바 -->
-      <div id="action-guidance" class="hidden" style="background:#0f172a; padding:6px; border-radius:6px; margin-bottom:8px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+      <div id="action-guidance" class="hidden" style="background:#0f172a; padding:8px 12px; border-radius:10px; margin-bottom:10px; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; border: 1px solid var(--panel-border);">
         <span id="action-text">대상을 선택하세요</span>
-        <button id="btn-cancel-action" style="width:auto; padding:3px 8px; margin-bottom:0; font-size:0.75rem;">취소</button>
+        <button id="btn-cancel-action" style="width:auto; padding:4px 10px; margin-bottom:0; font-size:0.75rem;">취소</button>
       </div>
 
-      <!-- 내가 보유한 증강 카드 목록 -->
       <div style="font-size: 0.85rem; font-weight: bold; margin-bottom: 6px;">내 액션 카드 (판당 1회)</div>
       <div id="my-hand-cards" class="cards-scroll" style="max-height: 120px;"></div>
     </div>
 
-    <!-- 전투 행동 로그 -->
     <div id="game-logs" class="log-box"></div>
 
     <div style="display: flex; gap: 8px;">
@@ -506,7 +563,7 @@
     </div>
   </div>
 
-  <!-- 게임 설명 모달 -->
+  <!-- 설명 모달 -->
   <div id="modal-rules" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 style="color: var(--gold-color);">게임 설명</h2>
@@ -517,7 +574,7 @@
         <h4>2. 게임 진행 순서</h4>
         <ul>
           <li><strong>방 생성 및 입장:</strong> 방장은 홍팀(X), 참가자는 청팀(O)으로 배정됩니다.</li>
-          <li><strong>비공개 상점 (30초):</strong> 주어진 별(기본 5개) 예산 내에서 무작위 5종의 카드 중 원하는 카드를 비공개로 구매합니다.</li>
+          <li><strong>비공개 상점 (30초):</strong> 주어진 별 예산 내에서 무작위 5종 카드 중 원하는 카드를 비공개로 구매합니다.</li>
           <li><strong>오프닝 효과:</strong> 구매 완료 후 오프닝 카드(중앙 선점, 모서리 돌)가 보드에 자동 배치됩니다. 무료 마크를 한쪽만 받으면 그쪽이 후공이 됩니다.</li>
           <li><strong>대전 시작:</strong> 자신의 턴에 일반 착수를 하거나 판당 1회 증강 액션을 사용할 수 있습니다.</li>
         </ul>
@@ -529,7 +586,7 @@
     </div>
   </div>
 
-  <!-- 증강 도감 모달 -->
+  <!-- 도감 모달 -->
   <div id="modal-catalog" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 style="color: var(--gold-color);">증강 카드 전체 도감 (13종)</h2>
@@ -555,7 +612,6 @@
       getDatabase, ref, set, get, update, remove, onValue, onDisconnect 
     } from "firebase/database";
 
-    // Firebase 설정
     const firebaseConfig = {
   apiKey: "AIzaSyAzDc8nErqYcYYy-itp2Tk9WZExy3PBlIU",
   authDomain: "battleship-f08f8.firebaseapp.com",
@@ -565,13 +621,11 @@
   messagingSenderId: "1146329001",
   appId: "1:1146329001:web:f2d698e5661582ee1f96b8"
 };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getDatabase(app);
     const DB_ROOT = "augmented_ttt_rooms";
 
-    // 13종 증강 카드 도감
     const CARD_CATALOG = {
       center:     { id: "center", name: "중앙 선점", cost: 4, type: "오프닝", desc: "시작 시 중앙 4칸 중 무작위 빈 칸에 내 마크 1개 배치" },
       corner:     { id: "corner", name: "모서리 돌", cost: 2, type: "오프닝", desc: "시작 시 무작위 빈 모서리에 내 마크 1개 배치" },
@@ -603,14 +657,13 @@
     let localSelectedCards = new Set();
 
     const authScreen = document.getElementById("auth-screen");
+    const waitingScreen = document.getElementById("waiting-screen");
     const gameScreen = document.getElementById("game-screen");
-    const waitingPanel = document.getElementById("waiting-panel");
     const boardEl = document.getElementById("board");
     const shopContainer = document.getElementById("shop-container");
     const boardContainer = document.getElementById("board-container");
     const logsBox = document.getElementById("game-logs");
 
-    // 햅틱 및 화면 피드백
     function triggerFeedback(type = "normal") {
       if (navigator.vibrate) {
         if (type === "hit") navigator.vibrate([100, 50, 100]);
@@ -633,7 +686,6 @@
       return val ? val : (myRole === "red" ? "홍팀" : "청팀");
     }
 
-    // 예산 선택
     document.querySelectorAll(".budget-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".budget-btn").forEach(b => b.classList.remove("active"));
@@ -642,7 +694,6 @@
       });
     });
 
-    // 4자리 방 코드 생성
     async function generateUniqueRoomCode() {
       for (let i = 0; i < 10; i++) {
         const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -666,9 +717,6 @@
       return currentUser;
     }
 
-    // ==========================================
-    // 설명 및 도감 모달 UI 이벤트
-    // ==========================================
     const modalRules = document.getElementById("modal-rules");
     const modalCatalog = document.getElementById("modal-catalog");
     const catalogList = document.getElementById("catalog-list");
@@ -697,9 +745,13 @@
     document.getElementById("btn-close-catalog").addEventListener("click", () => modalCatalog.classList.add("hidden"));
     document.getElementById("btn-in-game-rules").addEventListener("click", () => modalCatalog.classList.remove("hidden"));
 
-    // ==========================================
-    // 방 생성 & 참가
-    // ==========================================
+    document.getElementById("btn-cancel-waiting").addEventListener("click", async () => {
+      if (roomRef) {
+        await remove(roomRef);
+      }
+      location.reload();
+    });
+
     document.getElementById("btn-create-room").addEventListener("click", async () => {
       try {
         await ensureAuth();
@@ -739,7 +791,8 @@
         onDisconnect(roomRef).remove();
 
         document.getElementById("display-room-code").textContent = code;
-        waitingPanel.classList.remove("hidden");
+        authScreen.classList.add("hidden");
+        waitingScreen.classList.remove("hidden");
         listenToRoom(code);
       } catch (err) {
         alert("방 생성 실패: " + err.message);
@@ -782,9 +835,6 @@
       }
     });
 
-    // ==========================================
-    // 실시간 방 동기화 리스너
-    // ==========================================
     function listenToRoom(code) {
       if (roomListener) roomListener();
       const rRef = ref(db, `${DB_ROOT}/${code}`);
@@ -800,11 +850,17 @@
       });
     }
 
-    // ==========================================
-    // 렌더링 총괄
-    // ==========================================
     function renderGame(data) {
+      if (data.status === "WAITING") {
+        authScreen.classList.add("hidden");
+        gameScreen.classList.add("hidden");
+        waitingScreen.classList.remove("hidden");
+        document.getElementById("display-room-code").textContent = data.code || currentRoomCode;
+        return;
+      }
+
       authScreen.classList.add("hidden");
+      waitingScreen.classList.add("hidden");
       gameScreen.classList.remove("hidden");
 
       document.getElementById("red-name").textContent = data.red?.name || "홍팀";
@@ -812,15 +868,7 @@
       document.getElementById("blue-name").textContent = data.blue?.name || "청팀";
       document.getElementById("blue-stars").textContent = `★ ${data.blue?.stars ?? 0}`;
 
-      if (data.status === "WAITING") {
-        waitingPanel.classList.remove("hidden");
-        document.getElementById("match-phase").textContent = "대기실";
-        document.getElementById("turn-indicator").textContent = "상대 입장 대기 중";
-        return;
-      }
-
       if (data.status === "SHOPPING") {
-        waitingPanel.classList.add("hidden");
         shopContainer.classList.remove("hidden");
         boardContainer.classList.add("hidden");
         document.getElementById("match-phase").textContent = "상점 페이즈 (30초)";
@@ -848,9 +896,6 @@
       }
     }
 
-    // ==========================================
-    // 상점 페이즈 로직
-    // ==========================================
     function renderShop(data) {
       const shopDiv = document.getElementById("shop-cards");
       shopDiv.innerHTML = "";
@@ -1005,9 +1050,6 @@
       updates["turn"] = actualFirst;
     }
 
-    // ==========================================
-    // 보드 및 카드 렌더링
-    // ==========================================
     function renderBoard(data) {
       boardEl.innerHTML = "";
       data.board.forEach((cellData, index) => {
@@ -1070,9 +1112,6 @@
       });
     }
 
-    // ==========================================
-    // 카드 액션 컨트롤
-    // ==========================================
     function triggerActionCardSelect(cardId, data) {
       if (selectedActionCard === cardId) {
         cancelAction();
@@ -1126,9 +1165,6 @@
       document.querySelectorAll(".cell").forEach(c => c.classList.remove("selected", "target-valid"));
     }
 
-    // ==========================================
-    // 착수 및 액션 처리
-    // ==========================================
     async function handleCellClick(index, data) {
       if (data.status !== "PLAYING") return;
       if (data.turn !== myRole) return alert("당신의 턴이 아닙니다.");
@@ -1137,7 +1173,6 @@
       const oppMark = myRole === "red" ? "O" : "X";
       const currentCell = data.board[index];
 
-      // 은신 마크 발견 판정
       if (currentCell && currentCell.stealth && currentCell.mark === oppMark) {
         triggerFeedback("hit");
         alert("상대의 은신 마크를 발견했습니다! 은신이 즉시 해제되며 다시 행동할 수 있습니다.");
@@ -1260,7 +1295,6 @@
       await commitTurn(updates, newBoard, data, endMyTurn, moveLog);
     }
 
-    // 줄 밀기 핸들러
     document.querySelectorAll(".push-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!selectedActionCard || selectedActionCard !== "push") return;
@@ -1302,16 +1336,12 @@
       await commitTurn(updates, newBoard, data, true, `${myRole} 착수 (${index})`);
     }
 
-    // ==========================================
-    // 턴 교대 및 승패/방패 판정
-    // ==========================================
     async function commitTurn(updates, board, currentData, switchTurn, logText) {
       if (logText) logMessage(logText);
 
       let winResult = evaluateWinCondition(board);
       const nextRole = myRole === "red" ? "blue" : "red";
 
-      // 방패 패시브 판정
       if (winResult.winner === myRole) {
         const defender = nextRole;
         const defenderCards = currentData[defender]?.cards || {};
@@ -1420,9 +1450,6 @@
       logsBox.scrollTop = logsBox.scrollHeight;
     }
 
-    // ==========================================
-    // 게임 종료 및 승리자 기기 5초 후 자동 방폭
-    // ==========================================
     function showResultModal(data) {
       const modal = document.getElementById("modal-result");
       const title = document.getElementById("modal-title");
