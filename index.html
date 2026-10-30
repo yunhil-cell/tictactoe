@@ -529,7 +529,7 @@
       <h3 style="font-size: 1rem; color: var(--gold-color);">비공개 증강 상점</h3>
       <p class="desc" style="margin-bottom: 8px;">동일 카드 5종 중 선택. 구매 확정 시 상대와 동시 공개</p>
       <div id="shop-cards" class="cards-scroll"></div>
-      <button id="btn-confirm-purchase" class="btn-gold">구매 확정 (<span id="my-cart-cost">0</span>별 소모)</button>
+      <button id="btn-confirm-purchase" class="btn-gold">구매 확정 (0별 소모)</button>
     </div>
 
     <!-- 보드 UI -->
@@ -613,14 +613,14 @@
     } from "firebase/database";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyAzDc8nErqYcYYy-itp2Tk9WZExy3PBlIU",
-  authDomain: "battleship-f08f8.firebaseapp.com",
-  databaseURL: "https://battleship-f08f8-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "battleship-f08f8",
-  storageBucket: "battleship-f08f8.firebasestorage.app",
-  messagingSenderId: "1146329001",
-  appId: "1:1146329001:web:f2d698e5661582ee1f96b8"
-};
+      apiKey: "AIzaSyDummyKeyForTemplateUsage_0000000000",
+      authDomain: "augmented-tictactoe.firebaseapp.com",
+      databaseURL: "https://augmented-tictactoe-default-rtdb.firebaseio.com",
+      projectId: "augmented-tictactoe",
+      storageBucket: "augmented-tictactoe.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -664,6 +664,22 @@
     const shopContainer = document.getElementById("shop-container");
     const boardContainer = document.getElementById("board-container");
     const logsBox = document.getElementById("game-logs");
+
+    // Firebase RTDB의 null 배열 소실을 16칸 고정 배열로 완벽 복원하는 헬퍼
+    function getNormalizedBoard(raw) {
+      const board = Array(16).fill(null);
+      if (!raw) return board;
+      if (Array.isArray(raw)) {
+        for (let i = 0; i < 16; i++) {
+          board[i] = raw[i] !== undefined ? raw[i] : null;
+        }
+      } else if (typeof raw === "object") {
+        for (let i = 0; i < 16; i++) {
+          board[i] = raw[i] !== undefined ? raw[i] : null;
+        }
+      }
+      return board;
+    }
 
     function triggerFeedback(type = "normal") {
       if (navigator.vibrate) {
@@ -899,16 +915,14 @@
     function renderShop(data) {
       const shopDiv = document.getElementById("shop-cards");
       shopDiv.innerHTML = "";
-      const myData = data[myRole];
-      const maxBudget = data.budget;
+      const myData = data[myRole] || { ready: false, stars: data.budget || 5 };
+      const maxBudget = data.budget || 5;
 
       let totalSelectedCost = 0;
       localSelectedCards.forEach(id => {
         totalSelectedCost += CARD_CATALOG[id].cost;
       });
-      document.getElementById("my-cart-cost").textContent = totalSelectedCost;
 
-      // Firebase RTDB의 객체/배열 변환 호환성 보장
       const cardList = Array.isArray(data.shopCards) 
         ? data.shopCards 
         : Object.values(data.shopCards || {});
@@ -946,6 +960,7 @@
         shopDiv.appendChild(cardRow);
       });
 
+      // DOM 삭제 문제 완벽 해결: 버튼 전체 텍스트로 안전하게 갱신
       const confirmBtn = document.getElementById("btn-confirm-purchase");
       if (myData.ready) {
         confirmBtn.disabled = true;
@@ -959,7 +974,10 @@
         shopCountdownTimer = setInterval(() => {
           const elapsed = Math.floor((Date.now() - data.shopStartTime) / 1000);
           const remain = Math.max(0, 30 - elapsed);
-          document.getElementById("turn-indicator").textContent = `남은 시간 ${remain}s`;
+          const timerEl = document.getElementById("turn-indicator");
+          if (timerEl) {
+            timerEl.textContent = `남은 시간 ${remain}s`;
+          }
           if (remain <= 0) {
             clearInterval(shopCountdownTimer);
             shopCountdownTimer = null;
@@ -984,7 +1002,7 @@
         myCardsObj[id] = true;
       });
 
-      const remainStars = data.budget - spent;
+      const remainStars = (data.budget || 5) - spent;
       const updates = {};
       updates[`${myRole}/ready`] = true;
       updates[`${myRole}/stars`] = remainStars;
@@ -993,14 +1011,18 @@
       const otherRole = myRole === "red" ? "blue" : "red";
       if (data[otherRole]?.ready) {
         updates["status"] = "PLAYING";
-        applyOpeningsAndStart(data, updates, myCardsObj, data[otherRole].cards);
+        const redCards = myRole === "red" ? myCardsObj : (data.red?.cards || {});
+        const blueCards = myRole === "blue" ? myCardsObj : (data.blue?.cards || {});
+        applyOpeningsAndStart(data, updates, redCards, blueCards);
       }
 
       await update(roomRef, updates);
     }
 
     function applyOpeningsAndStart(data, updates, redCards, blueCards) {
-      let board = [...data.board];
+      // getNormalizedBoard 로 안전 복원
+      let board = getNormalizedBoard(data.board);
+
       const hasRedCenter = !!redCards["center"];
       const hasBlueCenter = !!blueCards["center"];
       const hasRedCorner = !!redCards["corner"];
@@ -1047,7 +1069,7 @@
 
       updates["board"] = board;
 
-      let actualFirst = data.scheduledFirst;
+      let actualFirst = data.scheduledFirst || "red";
       if (redFreeMarks > 0 && blueFreeMarks === 0) {
         actualFirst = "blue";
       } else if (blueFreeMarks > 0 && redFreeMarks === 0) {
@@ -1058,7 +1080,9 @@
 
     function renderBoard(data) {
       boardEl.innerHTML = "";
-      data.board.forEach((cellData, index) => {
+      const currentBoard = getNormalizedBoard(data.board);
+
+      currentBoard.forEach((cellData, index) => {
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.dataset.index = index;
@@ -1091,7 +1115,7 @@
 
       Object.keys(myCards).forEach(cardId => {
         const card = CARD_CATALOG[cardId];
-        if (card.type === "오프닝") return;
+        if (!card || card.type === "오프닝") return;
 
         const isUsed = !!usedCards[cardId];
         const isPassive = card.type === "패시브";
@@ -1177,12 +1201,13 @@
 
       const myMark = myRole === "red" ? "X" : "O";
       const oppMark = myRole === "red" ? "O" : "X";
-      const currentCell = data.board[index];
+      const currentBoard = getNormalizedBoard(data.board);
+      const currentCell = currentBoard[index];
 
       if (currentCell && currentCell.stealth && currentCell.mark === oppMark) {
         triggerFeedback("hit");
         alert("상대의 은신 마크를 발견했습니다! 은신이 즉시 해제되며 다시 행동할 수 있습니다.");
-        const nextBoard = [...data.board];
+        const nextBoard = [...currentBoard];
         nextBoard[index] = { mark: oppMark, stealth: false };
         await update(roomRef, { board: nextBoard });
         return;
@@ -1190,12 +1215,12 @@
 
       if (!selectedActionCard) {
         if (currentCell !== null) return alert("이미 마크가 있는 칸입니다.");
-        await executeNormalPlacement(index, data, myMark, false);
+        await executeNormalPlacement(index, currentBoard, data, myMark, false);
         return;
       }
 
       const card = selectedActionCard;
-      let newBoard = [...data.board];
+      let newBoard = [...currentBoard];
       let endMyTurn = true;
       let moveLog = "";
 
@@ -1249,7 +1274,7 @@
           tempSwapSource = index;
           actionSubStep = "select_destination";
           document.getElementById("action-text").textContent = "[이동] 상하좌우 빈 칸을 선택하세요.";
-          highlightMoveDestinations(index, data.board);
+          highlightMoveDestinations(index, currentBoard);
           return;
         } else {
           if (!isAdjacent4(tempSwapSource, index) || currentCell !== null) {
@@ -1286,7 +1311,7 @@
         
         const usedUpdates = {};
         usedUpdates[`${myRole}/usedCards/${card}`] = true;
-        usedUpdates["board"] = newBoard;
+        updates_board_sync(usedUpdates, newBoard);
         usedUpdates["lastMove"] = null;
         cancelAction();
         await update(roomRef, usedUpdates);
@@ -1295,10 +1320,13 @@
 
       const updates = {};
       updates[`${myRole}/usedCards/${card}`] = true;
-      updates["board"] = newBoard;
       cancelAction();
 
       await commitTurn(updates, newBoard, data, endMyTurn, moveLog);
+    }
+
+    function updates_board_sync(updates, board) {
+      updates["board"] = board;
     }
 
     document.querySelectorAll(".push-btn").forEach(btn => {
@@ -1308,7 +1336,7 @@
         
         const snap = await get(roomRef);
         const data = snap.val();
-        let board = [...data.board];
+        let board = getNormalizedBoard(data.board);
 
         const c0 = board[col];
         const c1 = board[col + 4];
@@ -1322,20 +1350,18 @@
 
         const updates = {};
         updates[`${myRole}/usedCards/push`] = true;
-        updates["board"] = board;
         cancelAction();
 
         await commitTurn(updates, board, data, true, `${myRole} ${col + 1}열 순환 줄 밀기`);
       });
     });
 
-    async function executeNormalPlacement(index, data, myMark, isStealth) {
-      const newBoard = [...data.board];
+    async function executeNormalPlacement(index, currentBoard, data, myMark, isStealth) {
+      const newBoard = [...currentBoard];
       newBoard[index] = { mark: myMark, stealth: isStealth };
       triggerFeedback();
 
       const updates = {
-        board: newBoard,
         lastMove: { index: index, mark: myMark }
       };
 
@@ -1344,6 +1370,7 @@
 
     async function commitTurn(updates, board, currentData, switchTurn, logText) {
       if (logText) logMessage(logText);
+      updates["board"] = board;
 
       let winResult = evaluateWinCondition(board);
       const nextRole = myRole === "red" ? "blue" : "red";
@@ -1379,8 +1406,8 @@
 
       if (isFull || newTurnCount >= 80) {
         updates["status"] = "FINISHED";
-        const redStars = currentData.red.stars;
-        const blueStars = currentData.blue.stars;
+        const redStars = currentData.red?.stars || 0;
+        const blueStars = currentData.blue?.stars || 0;
         
         if (redStars > blueStars) {
           updates["winner"] = "red";
@@ -1479,7 +1506,6 @@
       reason.textContent = data.finishReason || "게임이 종료되었습니다.";
       starsInfo.textContent = `최종 잔여 별 - 홍팀: ★${data.red?.stars || 0} | 청팀: ★${data.blue?.stars || 0}`;
 
-      // 결과 확인 시 즉시 방폭 및 복귀 버튼 바인딩
       document.getElementById("btn-confirm-end").onclick = async () => {
         if (roomRef) {
           try { await remove(roomRef); } catch(e){}
@@ -1488,7 +1514,6 @@
       };
     }
 
-    // 항복 시 즉각 방폭 후 대기실 복귀
     document.getElementById("btn-surrender").addEventListener("click", async () => {
       if (!confirm("정말 기권하시겠습니까? 방이 즉시 삭제됩니다.")) return;
       if (roomRef) {
@@ -1497,7 +1522,6 @@
       location.reload();
     });
 
-    // 나가기 클릭 시 즉시 방 삭제 후 대기실 복귀
     document.getElementById("btn-exit").addEventListener("click", async () => {
       if (confirm("방을 나가시겠습니까? 현재 게임이 즉시 종료됩니다.")) {
         if (roomRef) {
@@ -1507,7 +1531,6 @@
       }
     });
 
-    // 관리자 마스터키 전체 초기화
     document.getElementById("btn-admin-reset").addEventListener("click", async () => {
       const pass = document.getElementById("admin-pass").value;
       if (pass !== "reset1234") {
